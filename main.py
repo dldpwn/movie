@@ -2,14 +2,14 @@ import streamlit as st
 
 # 페이지 기본 설정
 st.set_page_config(
-    page_title="👻 맞춤형 호러 영화 추천소",
+    page_title="👻 맞춤형 공포 영화 추천소",
     page_icon="🎬",
     layout="centered"
 )
 
 # 타이틀 및 소개
-st.title("👻 관객 맞춤형 호러 영화 추천소")
-st.caption("함께 보는 사람, 공포 내성, 취향에 맞춰 딱 맞는 영화를 추천해 드립니다!")
+st.title("👻 취향별 & 관객별 공포 영화 추천소")
+st.caption("공포 영화의 다양한 세부 장르와 관객의 특성에 맞춰 딱 맞는 영화를 추천해 드립니다!")
 
 st.write("---")
 
@@ -28,99 +28,92 @@ with col2:
         options=["입문자 (귀신 싫음)", "초보 (적당한 으스스함)", "중급 (갑툭튀 가능)", "상급 (진짜 무서운 것)", "마니아 (극강의 기괴함)"]
     )
 
-style = st.multiselect(
-    "🎭 선호하는 공포 스타일을 선택하세요 (복수 선택 가능)",
-    ["심리/미스터리", "점프스케어(갑툭튀)", "오컬트/악마", "슬래셔/크리처", "잔잔한 힐링형/코미디"],
-    default=["심리/미스터리"]
+genre_choice = st.selectbox(
+    "🎭 가장 끌리는 공포 영화 장르를 선택하세요",
+    [
+        "전체 (알아서 추천)",
+        "🔪 슬래셔 / 킬러 (살인마, 긴장감)",
+        "🕯️ 오컬트 / 악마 / 퇴마 (주술, 초자연)",
+        "📹 파운드 푸티지 / 리얼리티 (실제 촬영 느낌)",
+        "🧠 심리 스릴러 / 미스터리 (반전, 정신적 압박)",
+        "👹 크리처 / 괴물 / 바이러스 (괴물, 감염)",
+        "🎃 호러 코미디 / 액션 (유쾌함, 덜 무서움)"
+    ]
 )
 
 st.write("---")
 
-# 2. 추천 로직 데이터
-def get_recommendations(companion, tolerance, style):
-    # 기본 추천 데이터베이스
-    movies = []
+# 2. 장르별 영화 데이터베이스
+movie_db = {
+    "슬래셔": [
+        {"title": "스크림 (Scream)", "desc": "가면을 쓴 살인마의 추적! 슬래셔 장르의 대표적인 명작입니다.", "level": "중급", "tag": "🔪 정통 슬래셔"},
+        {"title": "텍사스 전기톱 연쇄살인사건", "desc": "숨 막히는 추격전과 잔혹한 긴장감이 특징인 고전 슬래셔 영화입니다.", "level": "상급", "tag": "🩸 하드코어 슬래셔"}
+    ],
+    "오컬트": [
+        {"title": "컨저링 (The Conjuring)", "desc": "실존 퇴마사 부부의 이야기를 다룬 정통 오컬트 명작입니다.", "level": "중급", "tag": "🕯️ 초자연 현상"},
+        {"title": "유전 (Hereditary)", "desc": "가족에게 내려진 기괴한 저주와 압도적인 오컬트 분위기를 자랑합니다.", "level": "마니아", "tag": "💀 심리적 압박 & 오컬트"},
+        {"title": "파묘 (Exhuma)", "desc": "수상한 묘를 이장하면서 벌어지는 한국형 오컬트 스릴러입니다.", "level": "초보", "tag": "🇰🇷 한국형 오컬트"}
+    ],
+    "파운드 푸티지": [
+        {"title": "곤지암", "desc": "폐병원 체험단을 생중계하는 듯한 몰입감을 주는 카메라 연출이 특징입니다.", "level": "상급", "tag": "📹 한국 체험형 공포"},
+        {"title": "블레어 윗치 (The Blair Witch Project)", "desc": "핸드헬드 카메라 연출의 원조로, 실제 사건 같은 스릴을 줍니다.", "level": "중급", "tag": "🌲 리얼리티 공포"}
+    ],
+    "심리 스릴러": [
+        {"title": "겟 아웃 (Get Out)", "desc": "기묘한 분위기와 인종적 소재를 결합한 세련된 반전 스릴러입니다.", "level": "초보", "tag": "💡 반전 & 심리 압박"},
+        {"title": "미드소마 (Midsommar)", "desc": "밝은 대낮의 축제 속에서 펼쳐지는 기괴하고 기이한 심리 호러입니다.", "level": "상급", "tag": "☀️ 백야 호러"}
+    ],
+    "크리처": [
+        {"title": "콰이어트 플레이스 (A Quiet Place)", "desc": "소리를 내는 순간 공격받는 괴물들과의 숨 막히는 생존기입니다.", "level": "초보", "tag": "🔇 긴장감 극대화"},
+        {"title": "더 씽 (The Thing)", "desc": "남극 기지에서 벌어지는 정체불명의 외계 생물체와의 사투를 다룹니다.", "level": "중급", "tag": "👾 클래식 크리처"}
+    ],
+    "호러 코미디": [
+        {"title": "해피 데스데이 (Happy Death Day)", "desc": "타임루프 소재와 유쾌한 전개가 돋보이는 입문용 공포 영화입니다.", "level": "입문자", "tag": "🎉 유쾌한 호러"},
+        {"title": "캐빈 인 더 우즈 (The Cabin in the Woods)", "desc": "공포 영화의 클리셰를 기발하게 비틀어버리는 재미가 있습니다.", "level": "초보", "tag": "🍿 팝콘 무비"}
+    ]
+}
 
-    if companion == "가족" or tolerance == "입문자 (귀신 싫음)":
-        movies.append({
-            "title": "해피 데스데이 (Happy Death Day)",
-            "genre": "코미디 / 미스터리 / 호러",
-            "desc": "생일날 반복되는 죽음이라는 신선한 타임루프 소재! 무섭기보다는 스릴 있고 유쾌하게 즐길 수 있습니다.",
-            "tag": "🎉 입문자 추천 & 무섭지 않은 호러"
-        })
-        movies.append({
-            "title": "몬스터 호텔 (Hotel Transylvania)",
-            "genre": "애니메이션 / 코미디",
-            "desc": "귀여운 몬스터들이 총출동하는 애니메이션! 온 가족이 함께 웃으며 볼 수 있는 유쾌한 영화입니다.",
-            "tag": "👨‍👩‍👧‍👦 가족 추천"
-        })
+# 3. 추천 로직
+def get_recommendations(selected_genre, tolerance):
+    recommendations = []
+    
+    # 장르 필터링
+    target_genres = []
+    if "슬래셔" in selected_genre:
+        target_genres.append("슬래셔")
+    elif "오컬트" in selected_genre:
+        target_genres.append("오컬트")
+    elif "파운드 푸티지" in selected_genre:
+        target_genres.append("파운드 푸티지")
+    elif "심리 스릴러" in selected_genre:
+        target_genres.append("심리 스릴러")
+    elif "크리처" in selected_genre:
+        target_genres.append("크리처")
+    elif "호러 코미디" in selected_genre:
+        target_genres.append("호러 코미디")
+    else:
+        # 전체 선택 시 주요 장르에서 하나씩 추출
+        target_genres = list(movie_db.keys())
 
-    elif companion == "연인/데이트":
-        movies.append({
-            "title": "콰이어트 플레이스 (A Quiet Place)",
-            "genre": "스릴러 / 서스펜스",
-            "desc": "소리를 내면 공격하는 괴물들 속에서 살아남아야 하는 긴장감! 몰입감이 뛰어나 데이트용으로 제격입니다.",
-            "tag": "👩‍❤️‍👨 데이트 추천 & 쫄깃한 긴장감"
-        })
-        movies.append({
-            "title": "겟 아웃 (Get Out)",
-            "genre": "미스터리 / 스릴러",
-            "desc": "지루할 틈 없는 몰입감과 예측할 수 없는 반전! 관람 후 함께 이야기 나누기 아주 좋은 작품입니다.",
-            "tag": "💡 심리 미스터리 띵작"
-        })
+    for g in target_genres:
+        for movie in movie_db[g]:
+            recommendations.append(movie)
 
-    elif companion == "친구들과 다 같이":
-        movies.append({
-            "title": "곤지암 (Gonjiam: Haunted Asylum)",
-            "genre": "파운드 푸티지 / 오컬트",
-            "desc": "친구들과 불 끄고 모여서 보기 최적인 한국 체험형 공포 영화! 체감 공포도가 상당합니다.",
-            "tag": "🍿 친구들과 떼관람 추천"
-        })
-        movies.append({
-            "title": "캐빈 인 더 우즈 (The Cabin in the Woods)",
-            "genre": "SF / 크리처 / 호러",
-            "desc": "클리셰를 비틀어버리는 화려한 카타르시스! 친구들과 팝콘 먹으며 소리지르기 딱 좋습니다.",
-            "tag": "🔥 화끈한 연출 & 유쾌함"
-        })
+    return recommendations
 
-    else: # 혼자 보는 경우
-        if "상급 (진짜 무서운 것)" in tolerance or "마니아 (극강의 기괴함)" in tolerance:
-            movies.append({
-                "title": "유전 (Hereditary)",
-                "genre": "오컬트 / 미스터리",
-                "desc": "가장 압도적이고 숨 막히는 공포. 영화가 끝난 후에도 며칠 동안 잔상이 남는 극강의 오컬트 걸작입니다.",
-                "tag": "💀 심야 혼자 보기 도전"
-            })
-            movies.append({
-                "title": "랑종 (The Medium)",
-                "genre": "페이크 다큐멘터리 / 오컬트",
-                "desc": "태국 샤머니즘을 다룬 기괴하고 축축한 분위기의 공포. 기운이 꺾일 정도로 강렬한 체험을 선사합니다.",
-                "tag": "🕯️ 극강의 마니아 추천"
-            })
-        else:
-            movies.append({
-                "title": "컨저링 (The Conjuring)",
-                "genre": "오컬트 / 실화 바탕",
-                "desc": "무서운 장면 없이 무서운 영화의 대명사! 정통 클래식 오컬트 공포의 진수를 느낄 수 있습니다.",
-                "tag": "🕯️ 정통 명작 호러"
-            })
-
-    return movies
-
-# 3. 결과 출력
+# 4. 결과 출력
 if st.button("🎬 맞춤 영화 추천받기", use_container_width=True):
-    results = get_recommendations(companion, tolerance, style)
+    results = get_recommendations(genre_choice, tolerance)
     
-    st.subheader(f"✨ [{companion}] 관객을 위한 맞춤 추천 영화")
+    st.subheader(f"✨ [{companion}] 관객을 위한 맞춤 추천 목록")
     
-    for idx, movie in enumerate(results, 1):
-        with st.container():
-            st.markdown(f"### {idx}. {movie['title']}")
-            st.caption(f"🏷️ **태그:** {movie['tag']} | 🎭 **장르:** {movie['genre']}")
-            st.write(movie['desc'])
-            st.write("")
-            
+    if results:
+        for idx, movie in enumerate(results, 1):
+            with st.container():
+                st.markdown(f"### {idx}. {movie['title']}")
+                st.caption(f"🏷️ **태그:** {movie['tag']} | 😱 **추천 난이도:** {movie['level']}")
+                st.write(movie['desc'])
+                st.write("")
     st.balloons()
 
 st.write("---")
-st.caption("💡 팁: 영화를 보실 때는 불을 끄고 이어폰을 착용하시면 공포감이 2배가 됩니다!")
+st.caption("💡 Tip: 영화 장르별 특성에 맞춰 조명이나 음향 환경을 조절하시면 더 재밌게 관람하실 수 있습니다!")
