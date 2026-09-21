@@ -8,8 +8,8 @@ st.set_page_config(
 )
 
 # 타이틀 및 소개
-st.title("👻 성격 & 다중 취향 맞춤형 공포 영화 추천소")
-st.caption("내 성격과 여러 선택 조건을 모두 분석하여 딱 맞는 영화를 추천해 드립니다!")
+st.title("👻 성격 & 취향 맞춤형 공포 영화 추천소")
+st.caption("공포 내성 난이도와 성격, 복수 선택한 취향을 엄격히 분석하여 최적의 영화를 추천합니다.")
 
 st.write("---")
 
@@ -38,14 +38,23 @@ with col2:
 # 2. 공포 내성 및 다중 장르 선택
 st.subheader("🎭 2. 공포 내성 및 상세 취향 선택")
 
-tolerance = st.select_slider(
-    "😱 공포 내성 (공포 수준)",
-    options=["입문자", "초보", "중급", "상급", "마니아"]
-)
+# 내성 수준을 정수 점수로 매핑 (입문자:1, 초보:2, 중급:3, 상급:4, 마니아:5)
+tolerance_map = {
+    "입문자 (귀신 싫음/호러 코미디만)": 1,
+    "초보 (적당한 스릴/반전 위주)": 2,
+    "중급 (기본적인 갑툭튀/슬래셔 가능)": 3,
+    "상급 (진짜 무서운 오컬트/체험형)": 4,
+    "마니아 (극강의 기괴함/하드코어)": 5
+}
 
-# 여러 개를 동시에 선택할 수 있는 multiselect
+selected_tolerance_label = st.select_slider(
+    "😱 공포 내성 (단계별 맞춤 필터링)",
+    options=list(tolerance_map.keys())
+)
+user_level = tolerance_map[selected_tolerance_label]
+
 selected_genres = st.multiselect(
-    "🎯 선호하는 공포 스타일을 모두 선택하세요 (복수 선택 가능)",
+    "🎯 선호하는 공포 스타일을 선택하세요 (복수 선택 가능)",
     [
         "슬래셔/살인마",
         "오컬트/악마/주술",
@@ -59,95 +68,142 @@ selected_genres = st.multiselect(
 
 st.write("---")
 
-# 3. 영화 데이터베이스 (장르 태그 복수 지정)
+# 3. 영화 데이터베이스 (각 영화마다 명확한 난이도 level 지정)
+# level 1: 입문자, 2: 초보, 3: 중급, 4: 상급, 5: 마니아
 movies_db = [
+    # Level 1 (입문자 전용)
     {
-        "title": "겟 아웃 (Get Out)",
-        "genres": ["심리 스릴러/반전"],
-        "min_level": "초보",
-        "desc": "기묘한 분위기와 예측할 수 없는 반전! 이성적이고 분석적인 성격의 관객에게 특히 높은 몰입감을 제공합니다.",
-        "tag": "💡 반전 & 심리 스릴러"
+        "title": "몬스터 호텔 (Hotel Transylvania)",
+        "genres": ["호러 코미디/유쾌함"],
+        "level": 1,
+        "level_name": "입문자",
+        "desc": "귀여운 몬스터들이 총출동하는 유쾌한 애니메이션! 공포 요소가 전혀 없어 평화주의자나 극도로 겁이 많은 분께 추천합니다.",
+        "tag": "🎉 완전 무자극 & 가족/입문자"
     },
     {
         "title": "해피 데스데이 (Happy Death Day)",
         "genres": ["호러 코미디/유쾌함", "심리 스릴러/반전"],
-        "min_level": "입문자",
-        "desc": "생일날 반복되는 죽음이라는 타임루프 소재! 겁은 많지만 호기심이 많은 분들에게 부담 없는 스릴을 안겨줍니다.",
+        "level": 1,
+        "level_name": "입문자",
+        "desc": "생일날 반복되는 죽음이라는 타임루프 소재! 무섭기보다는 유쾌하고 스릴 넘쳐 겁은 많지만 호기심이 많은 관객에게 딱입니다.",
         "tag": "🎉 유쾌한 호러 & 타임루프"
+    },
+    
+    # Level 2 (초보용)
+    {
+        "title": "겟 아웃 (Get Out)",
+        "genres": ["심리 스릴러/반전"],
+        "level": 2,
+        "level_name": "초보",
+        "desc": "귀신이나 갑툭튀 없이 기묘한 분위기와 예측할 수 없는 반전으로 끌고 갑니다. 분석적인 성격의 관객에게 강력 추천합니다.",
+        "tag": "💡 세련된 반전 & 심리 스릴러"
     },
     {
         "title": "콰이어트 플레이스 (A Quiet Place)",
         "genres": ["크리처/괴물", "심리 스릴러/반전"],
-        "min_level": "초보",
-        "desc": "소리를 내면 공격하는 괴물과의 사투! 침묵 속 숨 막히는 긴장감이 감수성이 풍부한 관객을 사로잡습니다.",
-        "tag": "🔇 긴장감 극대화 & 크리처"
+        "level": 2,
+        "level_name": "초보",
+        "desc": "소리를 내면 공격하는 괴물과의 숨 막히는 사투! 잔혹함보다는 서스펜스가 뛰어나 연인이나 데이트용으로 좋습니다.",
+        "tag": "🔇 몰입감 극대화 & 크리처"
     },
+
+    # Level 3 (중급용)
     {
-        "title": "곤지암 (Gonjiam: Haunted Asylum)",
-        "genres": ["파운드 푸티지(실제 촬영 느낌)", "오컬트/악마/주술"],
-        "min_level": "상급",
-        "desc": "폐병원 체험단을 생중계하는 듯한 현장감! 자극을 즐기는 관객이나 친구들과 모여서 보기 최적인 체험형 공포입니다.",
-        "tag": "📹 체험형 공포 & 오컬트"
-    },
-    {
-        "title": "유전 (Hereditary)",
-        "genres": ["오컬트/악마/주술", "심리 스릴러/반전"],
-        "min_level": "마니아",
-        "desc": "가문에 내려진 저주와 기괴한 분위기. 영화가 끝난 후에도 잔상이 남는 압도적인 오컬트 심리 호러입니다.",
-        "tag": "💀 극강의 오컬트 & 심리 압박"
+        "title": "스크림 (Scream)",
+        "genres": ["슬래셔/살인마", "심리 스릴러/반전"],
+        "level": 3,
+        "level_name": "중급",
+        "desc": "가면을 쓴 살인마의 추적과 추리 요소가 결합된 정통 슬래셔! 적당한 긴장감과 추리를 동시에 즐길 수 있습니다.",
+        "tag": "🔪 정통 슬래셔 & 추리"
     },
     {
         "title": "캐빈 인 더 우즈 (The Cabin in the Woods)",
         "genres": ["호러 코미디/유쾌함", "크리처/괴물", "슬래셔/살인마"],
-        "min_level": "초보",
-        "desc": "클리셰를 기발하게 비틀어버리는 호러 종합선물세트! 다양한 공포 요소를 한 번에 즐기고 싶을 때 제격입니다.",
-        "tag": "🍿 호러 코미디 & 크리처 종합판"
+        "level": 3,
+        "level_name": "중급",
+        "desc": "클리셰를 기발하게 비틀어버리는 호러 종합선물세트! 친구들과 모여 팝콘을 먹으며 즐기기 좋은 스릴감입니다.",
+        "tag": "🍿 화끈한 연출 & 호러 종합판"
+    },
+
+    # Level 4 (상급용)
+    {
+        "title": "곤지암 (Gonjiam: Haunted Asylum)",
+        "genres": ["파운드 푸티지(실제 촬영 느낌)", "오컬트/악마/주술"],
+        "level": 4,
+        "level_name": "상급",
+        "desc": "폐병원 체험단을 생중계하는 듯한 강렬한 현장감과 갑툭튀! 자극과 체험형 공포를 즐기는 관객에게 제격입니다.",
+        "tag": "📹 체험형 극강 공포"
     },
     {
-        "title": "스크림 (Scream)",
-        "genres": ["슬래셔/살인마", "심리 스릴러/반전"],
-        "min_level": "중급",
-        "desc": "가면을 쓴 살인마의 추적과 추리 요소가 결합된 명작! 범인을 분석하며 보기 좋습니다.",
-        "tag": "🔪 정통 슬래셔 & 추리"
+        "title": "컨저링 (The Conjuring)",
+        "genres": ["오컬트/악마/주술"],
+        "level": 4,
+        "level_name": "상급",
+        "desc": "실존 퇴마사 부부의 이야기를 다룬 정통 오컬트 명작! 무거운 분위기와 초자연 현상이 주는 압박감이 상당합니다.",
+        "tag": "🕯️ 정통 오컬트 명작"
+    },
+
+    # Level 5 (마니아용)
+    {
+        "title": "유전 (Hereditary)",
+        "genres": ["오컬트/악마/주술", "심리 스릴러/반전"],
+        "level": 5,
+        "level_name": "마니아",
+        "desc": "가문에 내려진 저주와 며칠 동안 잔상이 남는 기괴함. 공포 영화 마니아들도 인정하는 압도적 수준의 오컬트 걸작입니다.",
+        "tag": "💀 극강의 오컬트 & 정신적 압박"
+    },
+    {
+        "title": "랑종 (The Medium)",
+        "genres": ["오컬트/악마/주술", "파운드 푸티지(실제 촬영 느낌)"],
+        "level": 5,
+        "level_name": "마니아",
+        "desc": "샤머니즘을 다룬 축축하고 기괴한 페이크 다큐멘터리! 멘탈이 강한 마니아 관객에게만 권장하는 극강의 공포입니다.",
+        "tag": "🕯️ 마니아 전용 극강 호러"
     }
 ]
 
-# 4. 추천 로직 (선택한 조건을 포함하고 있는지 검사)
-def recommend_movies(selected_genres, tolerance):
-    matched_movies = []
+# 4. 엄격한 필터링 로직
+def recommend_strict_movies(selected_genres, user_level):
+    matched = []
     
     for movie in movies_db:
-        # 선택한 장르 조건 중 하나 이상 포함하는지 확인 (복수 선택 반영)
-        # 선택한 모든 장르를 포함하는 영화를 우선 검색
-        has_genre_match = any(g in movie["genres"] for g in selected_genres)
+        # 1) 내성 수준 일치 여부 확인 (사용자가 선택한 레벨과 같거나 ±1 범위 내로 제한)
+        # 입문자(1)에게 상급/마니아(4~5) 영화가 추천되는 것을 완벽 차단
+        level_diff = abs(movie["level"] - user_level)
         
-        if has_genre_match:
-            matched_movies.append(movie)
+        # 2) 장르 조건 포함 여부 확인
+        has_genre = any(g in movie["genres"] for g in selected_genres)
+        
+        # 내성이 딱 맞고 장르도 부합하는 영화 필터링
+        if level_diff <= 1 and has_genre:
+            matched.append(movie)
             
-    return matched_movies
+    # 난이도가 사용자 레벨에 가장 정확히 일치하는 순으로 정렬
+    matched.sort(key=lambda x: abs(x["level"] - user_level))
+    return matched
 
 # 5. 결과 출력
-if st.button("🎬 내 성격 & 취향에 맞는 영화 찾기", use_container_width=True):
+if st.button("🎬 내 성격 & 내성에 맞는 영화 추천받기", use_container_width=True):
     if not selected_genres:
         st.warning("⚠️ 최소 하나 이상의 공포 스타일을 선택해 주세요!")
     else:
-        results = recommend_movies(selected_genres, tolerance)
+        results = recommend_strict_movies(selected_genres, user_level)
         
         st.write("---")
-        st.subheader(f"✨ [{personality}] 성격을 가진 관객을 위한 맞춤 영화")
-        st.caption(f"선택하신 조건: **{', '.join(selected_genres)}** | 함께 보는 사람: **{companion}**")
+        st.subheader(f"✨ [{personality}] / [{selected_tolerance_label.split(' ')[0]}] 맞춤 추천")
+        st.caption(f"선택 장르: **{', '.join(selected_genres)}** | 함께 보는 사람: **{companion}**")
         st.write("")
         
         if results:
             for idx, movie in enumerate(results, 1):
                 with st.container():
                     st.markdown(f"### {idx}. {movie['title']}")
-                    st.caption(f"🏷️ **태그:** {movie['tag']} | 🎭 **포함 장르:** {', '.join(movie['genres'])}")
+                    st.caption(f"🏷️ **태그:** {movie['tag']} | 😱 **난이도:** {movie['level_name']} (Lv.{movie['level']})")
                     st.write(movie['desc'])
                     st.write("")
             st.balloons()
         else:
-            st.info("💡 선택하신 모든 조건 조합에 일치하는 영화를 찾지 못했습니다. 장르 선택 범위를 조금 더 넓혀보세요!")
+            st.info("💡 선택하신 공포 내성 단계와 장르 조합에 맞는 영화가 없습니다. 장르 선택을 조정해 보세요!")
 
 st.write("---")
-st.caption("💡 팁: 성격과 취향 조합에 맞는 영화를 관람하면 훨씬 더 깊은 몰입감을 얻을 수 있습니다.")
+st.caption("💡 팁: 내성 단계에 꼭 맞는 영화를 선택하셔야 유쾌한 감상이 가능합니다.")
